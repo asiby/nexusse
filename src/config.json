@@ -2,5 +2,29 @@
     "port": 3000,
     "max_publishing_topics_counts": 2,
     "max_subscription_topics_counts": 20,
-    "keep_alive_interval": 40
+    "keep_alive_interval": 40,
+
+    "channels": [
+        {
+            "path": "/events",
+            "subscriptionLimit": 10,
+            "topicsLimit": 20,
+            "allowedSubscribersOrigins": [],
+            "allowedPublishersOrigins": [],
+            "allowDynamicTopics": true,
+            "topics": []
+        },
+        {
+            "path": "/events",
+            "subscriptionLimit": 10,
+            "topicsLimit": null,
+            "allowedSubscribersOrigins": [],
+            "allowedPublishersOrigins": [],
+            "allowDynamicTopics": false,
+            "topics": [
+                "jokes",
+                "countries-names"
+            ]
+        }
+    ]
 }
