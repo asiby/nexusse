@@ -1,0 +1,26 @@
+{
+  "name": "nexusse-demo",
+  "version": "1.0.0",
+  "description": "Demo app for the Nexusse package",
+  "main": "index.js",
+  "dependencies": {
+    "nexusse": "file:.."
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "demo",
+    "nexusse",
+    "sse",
+    "hub"
+  ],
+  "author": {
+    "name": "Abdoulaye Siby",
+    "email": "maestro@abdoulaye.com",
+    "url": "https://abdoulaye.com"
+  },
+  "license": "MIT"
+}

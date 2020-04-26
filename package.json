@@ -5,7 +5,10 @@
   "main": "src/nexusse.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/nexusse.js"
+    "start": "node src/nexusse.js",
+    "build-demo": "npm install --prefix ./demo/ . && echo \"Start the demo projet by running: npm start-demo\"",
+    "start-demo": "cd demo && npm start",
+    "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start"
   },
   "keywords": ["Server-Sent", "Event", "EventSource","PubSub", "hub"],
   "author": {
