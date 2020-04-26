@@ -1,16 +1,11 @@
-const express = require("express")
+const Express = require("express")
 const bodyParser = require("body-parser")
 const cors = require("cors")
 const events = require('events')
 const Subscriber = require('./Subscriber')
 const Subscribers = require('./Subscribers')
-const config = require('./config')
-
-// Port used by the app
-const PORT = config.get('port')
-
-// Keep-alive interval in seconds
-const KEEP_ALIVE_INTERVAL = config.get('keep_alive_interval')
+const defaultConfig = require('./config')
+const appName = 'Nexusse'
 
 // Mandatory headers and http status to keep connection open
 const httpResponseHeaders = {
@@ -19,78 +14,128 @@ const httpResponseHeaders = {
     'Cache-Control': 'no-cache'
 }
 
-/**
- * Main application
- */
-const app = express()
+// noinspection JSUnusedLocalSymbols
+class Nexusse {
+    constructor(config = null) {
+        this.config = defaultConfig
 
-// Set cors and bodyParser middleware
-app.use(cors())
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: false }))
+        if (config && (typeof config !== 'number')) {
+            if (config.constructor === ({}).constructor) {
+                for (const property in config) {
+                    // noinspection JSUnfilteredForInLoop
+                    this.config.set(property, config[property])
+                }
+            }
+        }
 
-// Create an object of EventEmitter class from events module
-const eventEmitter = new events.EventEmitter()
+        // Main app
+        this.app = new Express()
 
-// Object for managing the list of subscribers
-let subscribers = new Subscribers(config)
+        // Create an object of EventEmitter class from events module
+        this.eventEmitter = new events.EventEmitter()
 
-// Define endpoints
-// noinspection JSUnresolvedFunction
-app.post('/publish', bodyParser.json(), publish)
-// noinspection JSUnresolvedFunction
-app.get('/subscribe', subscriptionHandler)
-// noinspection JSUnresolvedFunction
-app.get('/status', (req, res) => res.json(JSON.stringify(subscribers.status())))
+        // Object for managing the list of subscribers
+        this.subscribers = new Subscribers(this.config)
 
-// Middleware for GET /subscribe endpoint
-function subscriptionHandler(req, res) {
-    // Write the response header to keep the connection open
-    res.writeHead(200, httpResponseHeaders)
+        // Set cors and bodyParser middleware
+        this.app.use(cors())
+        this.app.use(bodyParser.json())
+        this.app.use(bodyParser.urlencoded({ extended: false }))
 
-    let subscriberId = (new Date()).getTime().toString() + Math.random() * 1000000000
-    let subscriber = new Subscriber(config, subscriberId, res, req.query.topics || [])
+        // Define endpoints
+        // noinspection JSUnresolvedFunction
+        this.app.post('/publish', bodyParser.json(), this.publish.bind(this))
+        // noinspection JSUnresolvedFunction
+        this.app.get('/subscribe', this.subscriptionHandler.bind(this))
+        // noinspection JSUnresolvedFunction
+        this.app.get('/status', ((req, res) => res.json(JSON.stringify(this.subscribers.status()))).bind(this))
 
-    // Create a new client object to be added to the clients map.
-    subscribers.add(subscriber)
-
-    const keepAliveListener = () => {
-        subscriber.keepAlive()
+        this.startKeepAliveTimer()
     }
 
-    req.on('close', () => {
-        subscribers.remove(subscriber)
-        eventEmitter.off('keep-alive', keepAliveListener)
-    })
+    get(option) {
+        switch (option) {
+            default:
+                return this.config.get(option)
+        }
+    }
 
-    eventEmitter.on('keep-alive', keepAliveListener)
+    set(option, value) {
+        switch (option) {
+            default:
+                this.config.set(option, value)
+        }
+    }
 
-    res.write(`data:connected\n\n`)
+    startKeepAliveTimer() {
+        // Try to keep the subscribers connected
+        this.keepAliveTimer = setInterval(() => {
+            this.eventEmitter.emit('keep-alive')
+        }, this.get('keep_alive_interval') * 1000)
+    }
 
-}
+    // noinspection JSUnusedGlobalSymbols
+    stopKeepAliveTimer() {
+        // Try to keep the subscribers connected
+        clearInterval(this.keepAliveTimer)
+    }
 
-// Middleware for PORT /publish endpoint
-async function publish(req, res) {
-    const publishPayload = req.body
-    console.log(req.body)
+    // Middleware for GET /subscribe endpoint
+    subscriptionHandler(req, res) {
+        // Write the response header to keep the connection open
+        res.writeHead(200, httpResponseHeaders)
+        console.log(this.config)
+        let subscriberId = (new Date()).getTime().toString() + Math.random() * 1000000000
+        let subscriber = new Subscriber(this.config, subscriberId, res, req.query.topics || [])
 
-    try {
-        subscribers.notify(publishPayload)
-    } catch (nexusseError) {
-        console.error(`${nexusseError.message} (code: ${nexusseError.code}). The notification was not sent.`)
-        res.writeHead(nexusseError.code || 500, (nexusseError.code && nexusseError.message) || undefined)
+        // Create a new client object to be added to the clients map.
+        this.subscribers.add(subscriber)
+
+        const keepAliveListener = () => {
+            subscriber.keepAlive()
+        }
+
+        req.on('close', () => {
+            this.subscribers.remove(subscriber)
+            this.eventEmitter.off('keep-alive', keepAliveListener)
+        })
+
+        this.eventEmitter.on('keep-alive', keepAliveListener)
+
+        res.write(`data:connected\n\n`)
+
+    }
+
+    // Middleware for PORT /publish endpoint
+    async publish(req, res) {
+        const publishPayload = req.body
+        console.log(req.body)
+
+        try {
+            this.subscribers.notify(publishPayload)
+        } catch (nexusseError) {
+            console.error(`${nexusseError.message} (code: ${nexusseError.code}). The notification was not sent.`)
+            res.writeHead(nexusseError.code || 500, (nexusseError.code && nexusseError.message) || undefined)
+            res.end()
+            return
+        }
+
+        res.writeHead(200)
         res.end()
-        return
     }
 
-    res.writeHead(200)
-    res.end()
+    // noinspection JSUnusedGlobalSymbols
+    listen(port = null, options = null) {
+        let defaultOptions = () => console.log(`${appName} server listening on port ${this.get('port')}`)
+        let _port = port || this.get('port')
+
+        // If the user has chosen a port at the time of listening
+        // for connections, then override the configuration port
+        // in the configuration object.
+        this.set('port', _port)
+
+        this.app.listen(_port, options || defaultOptions())
+    }
 }
 
-// Try to keep the subscribers connected
-setInterval(() => {
-    eventEmitter.emit('keep-alive')
-}, KEEP_ALIVE_INTERVAL * 1000)
-
-// Start the server on the specified port
-app.listen(PORT, () => console.log(`Nexusse server listening on port ${PORT}`))
+module.exports = Nexusse
