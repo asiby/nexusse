@@ -2,7 +2,7 @@
     "port": 3000,
     "max_publishing_topics_counts": 2,
     "max_subscription_topics_counts": 20,
-    "keep_alive_interval": 40,
+    "keepAliveInterval": 40,
 
     "channels": [
         {

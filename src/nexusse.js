@@ -66,6 +66,23 @@ class NexusseCore {
 
     set(option, value) {
         switch (option) {
+            case 'keepAliveInterval':
+                if (typeof value !== "number") {
+                    return
+                }
+
+                let intValue = parseInt(value)
+
+                if (!intValue || intValue < 5) {
+                    return
+                }
+
+                this.config.set(option, value)
+                this
+                    .stopKeepAliveTimer()
+                    .startKeepAliveTimer()
+                break
+
             default:
                 this.config.set(option, value)
         }
@@ -77,7 +94,7 @@ class NexusseCore {
         // Try to keep the subscribers connected
         this.keepAliveTimer = setInterval(() => {
             this.eventEmitter.emit('keep-alive')
-        }, this.get('keep_alive_interval') * 1000)
+        }, this.get('keepAliveInterval') * 1000)
 
         return this
     }
