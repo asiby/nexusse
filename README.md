@@ -2,6 +2,7 @@
 As simple Server-Sent Event hub based on Express.
 
 ```
+```js
 const Nexusse = require('nexusse')
 const nexusse = new Nexusse()
 
@@ -29,7 +30,7 @@ The installation is done using the npm install command:
 
 The configuration looks like the following:
 
-```
+```js
 {
     "port": 3000,
     "keepAliveInterval": 40
@@ -38,7 +39,7 @@ The configuration looks like the following:
 
 You can pass a configuration as a literal object to the constructor.
 
-```
+```js
 const Nexusse = require('nexusse')
 
 const nexusse = new Nexusse({
