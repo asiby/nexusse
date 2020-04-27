@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A Pub/Sub HUB for Server-Sent Event",
   "main": "src/nexusse.js",
+  "repository": "asiby/nexusse",
   "scripts": {
     "test": "jest",
     "start": "node src/nexusse.js",
