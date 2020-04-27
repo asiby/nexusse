@@ -28,7 +28,7 @@ class NexusseCore {
             if (config.constructor === ({}).constructor) {
                 for (const property in config) {
                     // noinspection JSUnfilteredForInLoop
-                    this.config.set(property, config[property])
+                    this.set(property, config[property])
                 }
             }
         }
