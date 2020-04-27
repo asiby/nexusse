@@ -52,8 +52,7 @@ class NexusseCore {
         this.app.post('/publish', bodyParser.json(), this.publish.bind(this))
         // noinspection JSUnresolvedFunction
         this.app.get('/subscribe', this.subscriptionHandler.bind(this))
-        // noinspection JSUnresolvedFunction
-        this.app.get('/status', ((req, res) => res.json(JSON.stringify(this.subscribers.status()))).bind(this))
+        this.app.get('/status', ((req, res) => res.json(JSON.stringify(this.subscribers.status()))))
 
         this.startKeepAliveTimer()
     }
