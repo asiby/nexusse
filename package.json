@@ -4,13 +4,19 @@
   "description": "A Pub/Sub HUB for Server-Sent Event",
   "main": "src/nexusse.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "start": "node src/nexusse.js",
     "build-demo": "npm install --prefix ./demo/ . && echo \"Start the demo projet by running: npm start-demo\"",
     "start-demo": "cd demo && npm start",
     "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start"
   },
-  "keywords": ["Server-Sent", "Event", "EventSource","PubSub", "hub"],
+  "keywords": [
+    "Server-Sent",
+    "Event",
+    "EventSource",
+    "PubSub",
+    "hub"
+  ],
   "author": {
     "name": "Abdoulaye Siby",
     "email": "maestro@abdoulaye.com",
@@ -22,5 +28,8 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "nconf": "^0.10.0"
+  },
+  "devDependencies": {
+    "jest": "^25.4.0"
   }
 }
