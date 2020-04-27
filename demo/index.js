@@ -1,5 +1,4 @@
 const Nexusse = require('nexusse')
-
 const nexusse = new Nexusse()
 
 nexusse.listen(null, () => {
