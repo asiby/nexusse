@@ -34,7 +34,7 @@ class NexusseCore {
         }
 
         // Main app
-        this.app = new Express()
+        this.app = Express()
 
         // Create an object of EventEmitter class from events module
         this.eventEmitter = new events.EventEmitter()
