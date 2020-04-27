@@ -23,7 +23,7 @@
     "email": "maestro@abdoulaye.com",
     "url": "https://abdoulaye.com"
   },
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
