@@ -14,8 +14,13 @@ const httpResponseHeaders = {
     'Cache-Control': 'no-cache'
 }
 
-// noinspection JSUnusedLocalSymbols
-class Nexusse {
+let nexusse = undefined
+
+function createNexusse(config = null) {
+    nexusse = new NexusseCore(config)
+}
+
+class NexusseCore {
     constructor(config = null) {
         this.config = defaultConfig
 
@@ -138,4 +143,33 @@ class Nexusse {
     }
 }
 
-module.exports = Nexusse
+class NexusssApi {
+    constructor(config = null) {
+        createNexusse(config)
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    startKeepAliveTimer() {
+        return nexusse.startKeepAliveTimer()
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    stopKeepAliveTimer() {
+        return nexusse.stopKeepAliveTimer()
+    }
+
+    get(option) {
+        return nexusse.get(option)
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    set(option, value) {
+        return nexusse.set(option, value)
+    }
+
+    listen(port = null, options = null) {
+        nexusse.listen(port, options)
+    }
+}
+
+module.exports = NexusssApi
