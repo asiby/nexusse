@@ -69,6 +69,8 @@ class NexusseCore {
             default:
                 this.config.set(option, value)
         }
+
+        return this
     }
 
     startKeepAliveTimer() {
@@ -76,12 +78,16 @@ class NexusseCore {
         this.keepAliveTimer = setInterval(() => {
             this.eventEmitter.emit('keep-alive')
         }, this.get('keep_alive_interval') * 1000)
+
+        return this
     }
 
     // noinspection JSUnusedGlobalSymbols
     stopKeepAliveTimer() {
         // Try to keep the subscribers connected
         clearInterval(this.keepAliveTimer)
+
+        return this
     }
 
     // Middleware for GET /subscribe endpoint
