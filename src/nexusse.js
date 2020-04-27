@@ -48,9 +48,7 @@ class NexusseCore {
         this.app.use(bodyParser.urlencoded({ extended: false }))
 
         // Define endpoints
-        // noinspection JSUnresolvedFunction
         this.app.post('/publish', bodyParser.json(), this.publish.bind(this))
-        // noinspection JSUnresolvedFunction
         this.app.get('/subscribe', this.subscriptionHandler.bind(this))
         this.app.get('/status', ((req, res) => res.json(JSON.stringify(this.subscribers.status()))))
 
@@ -99,7 +97,6 @@ class NexusseCore {
         return this
     }
 
-    // noinspection JSUnusedGlobalSymbols
     stopKeepAliveTimer() {
         // Try to keep the subscribers connected
         clearInterval(this.keepAliveTimer)
@@ -107,11 +104,10 @@ class NexusseCore {
         return this
     }
 
-    // Middleware for GET /subscribe endpoint
     subscriptionHandler(req, res) {
         // Write the response header to keep the connection open
         res.writeHead(200, httpResponseHeaders)
-        console.log(this.config)
+
         let subscriberId = (new Date()).getTime().toString() + Math.random() * 1000000000
         let subscriber = new Subscriber(this.config, subscriberId, res, req.query.topics || [])
 
@@ -151,7 +147,6 @@ class NexusseCore {
         res.end()
     }
 
-    // noinspection JSUnusedGlobalSymbols
     listen(port = null, options = null) {
         let defaultOptions = () => console.log(`${appName} server listening on port ${this.get('port')}`)
         let _port = port || this.get('port')
