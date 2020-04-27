@@ -1,3 +1,9 @@
+/**
+ * @property {function()} argv
+ * @property {function(object)} defaults
+ * @property {function(string)} get
+ * @property {function(string, string)} set
+ */
 const nConf = require('nconf')
 
 // First consider commandline arguments and environment variables, respectively.
