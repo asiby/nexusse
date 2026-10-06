@@ -22,9 +22,12 @@
     "dist"
   ],
   "engines": {
-    "node": ">=18.18"
+    "node": ">=22"
   },
-  "repository": "asiby/nexusse",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asiby/nexusse.git"
+  },
   "scripts": {
     "build": "tsup",
     "prepare": "npm run build",
@@ -61,5 +64,9 @@
     "tsup": "^8.5.1",
     "typescript": "~5.9",
     "vitest": "^5.0.3"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/asiby/nexusse/issues"
+  },
+  "homepage": "https://github.com/asiby/nexusse#readme"
 }

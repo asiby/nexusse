@@ -7,7 +7,7 @@ export default defineConfig({
     dts: { compilerOptions: { stripInternal: true } },
     clean: true,
     sourcemap: true,
-    target: 'node18',
+    target: 'node22',
     platform: 'node',
     // Keep `require('nexusse')` returning the class, as in 1.x, while also
     // exposing `.Nexusse`, `.NexusseError` and `.default` for named imports.
