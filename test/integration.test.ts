@@ -282,6 +282,29 @@ describe('POST /publish', () => {
         sub.req.destroy()
     })
 
+    test('delivers falsy but valid data such as 0, false and ""', async () => {
+        const sub = await subscribe('?topics=news')
+
+        for (const data of [0, false, '']) {
+            const res = await request('POST', '/publish', { event: 'falsy', data, topics: 'news' })
+            expect(res.status).toBe(200)
+        }
+
+        await waitFor(() => (sub.chunks.match(/event: falsy/g) ?? []).length === 3)
+        expect(sub.chunks).toContain('data: 0\n')
+        expect(sub.chunks).toContain('data: false\n')
+        expect(sub.chunks).toContain('data: ""\n')
+        sub.req.destroy()
+    })
+
+    test('returns 400 when data is missing or null', async () => {
+        for (const body of [{ event: 'e', topics: 'news' }, { event: 'e', topics: 'news', data: null }]) {
+            const res = await request('POST', '/publish', body)
+            expect(res.status).toBe(400)
+            expect(JSON.parse(res.body).error).toMatch(/data/)
+        }
+    })
+
     test('returns 400 with a JSON error for an invalid payload', async () => {
         const res = await request('POST', '/publish', { data: 'no event or topics' })
         expect(res.status).toBe(400)

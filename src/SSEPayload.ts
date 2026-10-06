@@ -36,7 +36,8 @@ export default class SSEPayload {
     toSsePayloadString(): string {
         let payload = ''
 
-        if (!this.data) {
+        // 0, false and "" are valid payloads; only a missing value is not
+        if (this.data === undefined || this.data === null) {
             throw new NexusseError('The data is required when sending an SSE event', 400)
         }
 

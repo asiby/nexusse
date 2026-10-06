@@ -34,6 +34,11 @@ export default class NotificationPayload {
             throw new NexusseError('The notification payload event is required', 400)
         }
 
+        // 0, false and "" are valid payloads; only a missing value is not
+        if (this.data === undefined || this.data === null) {
+            throw new NexusseError('The notification payload data is required', 400)
+        }
+
         if (!this.topics.length) {
             throw new NexusseError('The notification payload must have at least one topic', 400)
         }
