@@ -1,4 +1,5 @@
 export { Nexusse, Nexusse as default, type ListeningCallback } from './nexusse'
 export { default as NexusseError } from './NexusseError'
+export { defaultOptions, type NexusseOptions } from './options'
 export type { HubStatus } from './Subscribers'
 export type { RawNotification } from './NotificationPayload'

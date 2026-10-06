@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'node:http'
 import NexusseError from './NexusseError'
-import type { Config } from './config'
+import type { Options as Config } from './options'
 
 /**
  * A connected client and the topics it listens to.
@@ -29,8 +29,8 @@ export default class Subscriber {
             throw new NexusseError('Invalid response object passed to a subscription', 400)
         }
 
-        if (this.topics.length > config.get('max_subscription_topics_counts')) {
-            throw new NexusseError(`The maximum number of topics (${config.get('max_subscription_topics_counts')}) for a subscription was reached`, 400)
+        if (this.topics.length > config.get('maxSubscriptionTopics')) {
+            throw new NexusseError(`The maximum number of topics (${config.get('maxSubscriptionTopics')}) for a subscription was reached`, 400)
         }
     }
 

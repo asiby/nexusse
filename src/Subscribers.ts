@@ -1,7 +1,7 @@
 import Subscriber from './Subscriber'
 import NotificationPayload, { type RawNotification } from './NotificationPayload'
 import SSEPayload from './SSEPayload'
-import type { Config } from './config'
+import type { Options as Config } from './options'
 
 export interface HubStatus {
     connections: number

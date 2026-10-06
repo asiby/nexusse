@@ -5,7 +5,7 @@ import cors from 'cors'
 import NexusseError from './NexusseError'
 import Subscriber from './Subscriber'
 import Subscribers from './Subscribers'
-import defaultConfig, { type Config } from './config'
+import { Options, type NexusseOptions } from './options'
 
 const appName = 'Nexusse'
 
@@ -20,21 +20,16 @@ export type ListeningCallback = () => void
 
 /** @internal */
 export class NexusseCore {
-    config: Config
+    config: Options
     app: ExpressApp
     eventEmitter: EventEmitter
     subscribers: Subscribers
     keepAliveTimer: NodeJS.Timeout | null = null
     server?: Server
 
-    constructor(config: Record<string, unknown> | null = null) {
-        this.config = defaultConfig
-
-        if (config && typeof config === 'object' && config.constructor === Object) {
-            for (const property in config) {
-                this.set(property, config[property])
-            }
-        }
+    constructor(options: Partial<NexusseOptions> = {}) {
+        // Each hub has its own options; nothing is shared between instances
+        this.config = new Options(options)
 
         // Main app
         this.app = Express()
@@ -58,36 +53,16 @@ export class NexusseCore {
         this.startKeepAliveTimer()
     }
 
-    get(option: string): any {
+    get<K extends keyof NexusseOptions>(option: K): NexusseOptions[K] {
         return this.config.get(option)
     }
 
-    set(option: string, value: unknown): this {
-        switch (option) {
-            case 'keepAliveInterval': {
-                if (typeof value !== 'number') {
-                    return this
-                }
+    set<K extends keyof NexusseOptions>(option: K, value: NexusseOptions[K]): this {
+        this.config.set(option, value)
 
-                const intValue = Math.trunc(value)
-
-                if (!intValue || intValue < 5) {
-                    return this
-                }
-
-                this.config.set(option, intValue)
-
-                // Only restart the timer if it is already running (e.g. not during construction)
-                if (this.keepAliveTimer) {
-                    this
-                        .stopKeepAliveTimer()
-                        .startKeepAliveTimer()
-                }
-                break
-            }
-
-            default:
-                this.config.set(option, value)
+        // Apply a new interval right away if the timer is already running
+        if (option === 'keepAliveInterval' && this.keepAliveTimer) {
+            this.startKeepAliveTimer()
         }
 
         return this
@@ -97,11 +72,8 @@ export class NexusseCore {
         // Never run two timers at once
         this.stopKeepAliveTimer()
 
-        const seconds = parseInt(this.get('keepAliveInterval'))
-
-        if (!Number.isInteger(seconds) || seconds < 1) {
-            throw new Error(`Invalid keepAliveInterval "${this.get('keepAliveInterval')}": expected a positive number of seconds`)
-        }
+        // Validated by Options: always an integer of at least 5
+        const seconds = this.get('keepAliveInterval')
 
         // Try to keep the subscribers connected
         this.keepAliveTimer = setInterval(() => {
@@ -202,7 +174,7 @@ export class NexusseCore {
      * @param callback Called once the server is actually listening.
      */
     listen(port: number | null = null, callback: ListeningCallback | null = null): Server {
-        const _port: number = (port === null || port === undefined) ? this.get('port') : port
+        const _port = (port === null || port === undefined) ? this.get('port') : port
         const onListening = typeof callback === 'function'
             ? callback
             : () => {
@@ -253,9 +225,8 @@ export class Nexusse {
     /** @internal */
     readonly core: NexusseCore
 
-    constructor(config: Record<string, unknown> | null = null) {
-        // Each instance owns its own core, so several hubs can coexist (e.g. in tests)
-        this.core = new NexusseCore(config)
+    constructor(options: Partial<NexusseOptions> = {}) {
+        this.core = new NexusseCore(options)
     }
 
     startKeepAliveTimer(): this {
@@ -268,11 +239,13 @@ export class Nexusse {
         return this
     }
 
-    get(option: string): any {
+    /** Reads an option. */
+    get<K extends keyof NexusseOptions>(option: K): NexusseOptions[K] {
         return this.core.get(option)
     }
 
-    set(option: string, value: unknown): this {
+    /** Changes an option. Throws a RangeError for invalid values. */
+    set<K extends keyof NexusseOptions>(option: K, value: NexusseOptions[K]): this {
         this.core.set(option, value)
         return this
     }

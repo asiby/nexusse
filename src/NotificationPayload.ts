@@ -1,5 +1,5 @@
 import NexusseError from './NexusseError'
-import type { Config } from './config'
+import type { Options as Config } from './options'
 
 export interface RawNotification {
     event?: string
@@ -36,8 +36,8 @@ export default class NotificationPayload {
             throw new NexusseError('The notification payload must have at least one topic', 400)
         }
 
-        if (this.topics.length > this.config.get('max_publishing_topics_counts')) {
-            throw new NexusseError(`The notification payload has exceeded the maximum number of ${this.config.get('max_publishing_topics_counts')} topics`, 400)
+        if (this.topics.length > this.config.get('maxPublishingTopics')) {
+            throw new NexusseError(`The notification payload has exceeded the maximum number of ${this.config.get('maxPublishingTopics')} topics`, 400)
         }
     }
 

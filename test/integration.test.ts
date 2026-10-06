@@ -82,8 +82,6 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-    // Configuration is a process-wide nconf store, so undo per-test changes
-    hub.set('keepAliveInterval', 40)
     await hub.close()
 })
 
@@ -119,6 +117,39 @@ describe('listen()', () => {
     })
 })
 
+describe('options', () => {
+    test('defaults', () => {
+        const other = new Nexusse()
+        expect(other.get('port')).toBe(3000)
+        expect(other.get('keepAliveInterval')).toBe(40)
+        expect(other.get('maxPublishingTopics')).toBe(2)
+        expect(other.get('maxSubscriptionTopics')).toBe(20)
+    })
+
+    test('are passed to the constructor and kept per hub', async () => {
+        const other = new Nexusse({ keepAliveInterval: 10, maxSubscriptionTopics: 1 })
+        expect(other.get('keepAliveInterval')).toBe(10)
+        expect(hub.get('keepAliveInterval')).toBe(40)
+
+        other.set('port', 4321)
+        expect(hub.get('port')).not.toBe(4321)
+        await other.close()
+    })
+
+    test('reject invalid values and unknown names', () => {
+        expect(() => new Nexusse({ keepAliveInterval: 2 })).toThrow(RangeError)
+        expect(() => new Nexusse({ port: 70000 })).toThrow(RangeError)
+        expect(() => new Nexusse({ nope: 1 } as never)).toThrow(TypeError)
+        expect(() => hub.set('maxPublishingTopics', 0)).toThrow(RangeError)
+    })
+
+    test('maxSubscriptionTopics limits subscriptions', async () => {
+        hub.set('maxSubscriptionTopics', 1)
+        const res = await request('GET', '/subscribe?topics=a&topics=b')
+        expect(res.status).toBe(400)
+    })
+})
+
 describe('keep-alive', () => {
     test('uses the configured interval in seconds', () => {
         expect(hub.get('keepAliveInterval')).toBe(40)
@@ -146,7 +177,7 @@ describe('keep-alive', () => {
     })
 
     test('rejects intervals below 5 seconds', () => {
-        hub.set('keepAliveInterval', 1)
+        expect(() => hub.set('keepAliveInterval', 1)).toThrow(RangeError)
         expect(hub.get('keepAliveInterval')).toBe(40)
     })
 })

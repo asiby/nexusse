@@ -1,5 +1,5 @@
 import NexusseError from './NexusseError'
-import type { Config } from './config'
+import type { Options as Config } from './options'
 
 export interface SSEPayloadOptions {
     id?: string
