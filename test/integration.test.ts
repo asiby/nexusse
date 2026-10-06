@@ -254,14 +254,31 @@ describe('POST /publish', () => {
         other.req.destroy()
     })
 
-    test('returns 400 for an invalid payload', async () => {
-        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    test('accepts a single topic as a string', async () => {
+        const sub = await subscribe('?topics=news')
 
+        const res = await request('POST', '/publish', { event: 'headline', data: 'hi', topics: 'news' })
+        expect(res.status).toBe(200)
+        expect(JSON.parse(res.body)).toEqual({ ok: true })
+
+        await waitFor(() => sub.chunks.includes('event: headline'))
+        sub.req.destroy()
+    })
+
+    test('returns 400 with a JSON error for an invalid payload', async () => {
         const res = await request('POST', '/publish', { data: 'no event or topics' })
         expect(res.status).toBe(400)
+        expect(JSON.parse(res.body).error).toMatch(/event/)
+    })
 
-        errorSpy.mockRestore()
-        logSpy.mockRestore()
+    test('returns 400 when targeting too many topics', async () => {
+        const res = await request('POST', '/publish', { event: 'e', data: 'd', topics: ['a', 'b', 'c'] })
+        expect(res.status).toBe(400)
+        expect(JSON.parse(res.body).error).toMatch(/maximum/)
+    })
+
+    test('returns 400 when the body is not a JSON object', async () => {
+        const res = await request('POST', '/publish', ['not', 'an', 'object'])
+        expect(res.status).toBe(400)
     })
 })

@@ -3,6 +3,7 @@ import type { Server } from 'node:http'
 import Express, { type Express as ExpressApp, type Request, type Response } from 'express'
 import cors from 'cors'
 import NexusseError from './NexusseError'
+import { normalizeTopics } from './topics'
 import Subscriber from './Subscriber'
 import Subscribers from './Subscribers'
 import { Options, type NexusseOptions } from './options'
@@ -95,21 +96,8 @@ export class NexusseCore {
         return this
     }
 
-    /**
-     * Normalizes the `topics` query parameter. Express gives a string for
-     * `?topics=a`, an array for `?topics=a&topics=b` and undefined when absent.
-     */
-    static normalizeTopics(rawTopics: unknown): string[] {
-        const list: unknown[] = Array.isArray(rawTopics) ? rawTopics : (rawTopics === undefined ? [] : [rawTopics])
-
-        return [...new Set(list
-            .filter((topic): topic is string => typeof topic === 'string')
-            .map(topic => topic.trim())
-            .filter(topic => topic.length > 0))]
-    }
-
     subscriptionHandler(req: Request, res: Response): void {
-        const topics = NexusseCore.normalizeTopics(req.query.topics)
+        const topics = normalizeTopics(req.query.topics)
 
         if (!topics.length) {
             res.status(400).json({ error: 'At least one topic is required' })
@@ -150,21 +138,27 @@ export class NexusseCore {
 
     // Handler for the POST /publish endpoint
     publish(req: Request, res: Response): void {
-        const publishPayload = req.body
-        console.log(req.body)
+        const body = req.body
 
-        try {
-            this.subscribers.notify(publishPayload)
-        } catch (error) {
-            const nexusseError = error as Partial<NexusseError>
-            console.error(`${nexusseError.message} (code: ${nexusseError.code}). The notification was not sent.`)
-            res.writeHead(nexusseError.code || 500, (nexusseError.code && nexusseError.message) || undefined)
-            res.end()
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            res.status(400).json({ error: 'The request body must be a JSON object' })
             return
         }
 
-        res.writeHead(200)
-        res.end()
+        try {
+            this.subscribers.notify(body)
+        } catch (error) {
+            if (error instanceof NexusseError) {
+                res.status(error.code).json({ error: error.message })
+                return
+            }
+
+            console.error('Nexusse: failed to publish a notification', error)
+            res.status(500).json({ error: 'Internal error: the notification was not sent' })
+            return
+        }
+
+        res.status(200).json({ ok: true })
     }
 
     /**

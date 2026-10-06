@@ -1,10 +1,12 @@
 import NexusseError from './NexusseError'
 import type { Options as Config } from './options'
+import { normalizeTopics } from './topics'
 
 export interface RawNotification {
     event?: string
     data?: unknown
-    topics?: string[]
+    /** One topic or a list of topics */
+    topics?: string | string[]
 }
 
 /**
@@ -18,7 +20,7 @@ export default class NotificationPayload {
     data: unknown
     topics: string[]
 
-    constructor(config: Config, { event = '', data = null, topics = [] }: RawNotification = {}) {
+    constructor(config: Config, { event = '', data = null, topics }: RawNotification = {}) {
         if (!config) {
             throw new Error('Missing configuration for the NotificationPayload class')
         }
@@ -26,7 +28,7 @@ export default class NotificationPayload {
         this.config = config
         this.event = event
         this.data = data
-        this.topics = topics
+        this.topics = normalizeTopics(topics)
 
         if (!this.event) {
             throw new NexusseError('The notification payload event is required', 400)
@@ -45,7 +47,7 @@ export default class NotificationPayload {
         return JSON.stringify(this.toJson())
     }
 
-    toJson(): Required<RawNotification> {
+    toJson(): { event: string, data: unknown, topics: string[] } {
         return {
             event: this.event,
             data: this.data,
