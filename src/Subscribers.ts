@@ -43,8 +43,14 @@ export default class Subscribers {
             const existing = this.data.get(topic)
 
             if (existing) {
-                // Filter out the disconnected subscriber and store the list back.
-                this.data.set(topic, existing.filter(saved => saved.id !== subscriber.id))
+                const remaining = existing.filter(saved => saved.id !== subscriber.id)
+
+                // Forget topics nobody listens to anymore
+                if (remaining.length) {
+                    this.data.set(topic, remaining)
+                } else {
+                    this.data.delete(topic)
+                }
             }
         })
     }

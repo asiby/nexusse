@@ -222,6 +222,23 @@ describe('GET /subscribe', () => {
 
         await waitFor(() => hub.core.subscribers.connectionCount() === 0)
     })
+
+    test('drops topics from /status once their last subscriber leaves', async () => {
+        const first = await subscribe('?topics=news&topics=sports')
+        const second = await subscribe('?topics=news')
+
+        first.req.destroy()
+        await waitFor(() => hub.core.subscribers.connectionCount() === 1)
+
+        let status = JSON.parse((await request('GET', '/status')).body)
+        expect(status).toEqual({ connections: 1, subscriptions: 1, topics: 1, summary: { news: 1 } })
+
+        second.req.destroy()
+        await waitFor(() => hub.core.subscribers.connectionCount() === 0)
+
+        status = JSON.parse((await request('GET', '/status')).body)
+        expect(status).toEqual({ connections: 0, subscriptions: 0, topics: 0, summary: {} })
+    })
 })
 
 describe('GET /status', () => {
