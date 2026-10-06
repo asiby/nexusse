@@ -4,19 +4,32 @@
  */
 import http from 'node:http'
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import Nexusse from '../src/nexusse.js'
+import type { AddressInfo } from 'node:net'
+import Nexusse from '../src/index'
 
-let hub
-let port
+let hub: Nexusse
+let port: number
+
+interface Subscription {
+    res: http.IncomingMessage
+    req: http.ClientRequest
+    chunks: string
+}
+
+interface HttpResult {
+    status: number | undefined
+    headers: http.IncomingHttpHeaders
+    body: string
+}
 
 /**
  * Opens an SSE subscription and collects everything the server writes.
  * Resolves once the response headers arrive.
  */
-function subscribe(query) {
+function subscribe(query: string): Promise<Subscription> {
     return new Promise((resolve, reject) => {
         const req = http.get(`http://localhost:${port}/subscribe${query}`, (res) => {
-            const sub = { res, req, chunks: '' }
+            const sub: Subscription = { res, req, chunks: '' }
             res.setEncoding('utf8')
             res.on('data', chunk => { sub.chunks += chunk })
             res.on('error', () => {})
@@ -26,7 +39,7 @@ function subscribe(query) {
     })
 }
 
-function request(method, path, body) {
+function request(method: string, path: string, body?: unknown): Promise<HttpResult> {
     return new Promise((resolve, reject) => {
         const payload = body === undefined ? undefined : JSON.stringify(body)
         const req = http.request({
@@ -47,10 +60,10 @@ function request(method, path, body) {
     })
 }
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 /** Waits until `predicate()` is true or the timeout expires. */
-async function waitFor(predicate, timeout = 1000) {
+async function waitFor(predicate: () => boolean, timeout = 1000) {
     const start = Date.now()
     while (!predicate()) {
         if (Date.now() - start > timeout) throw new Error('Timed out waiting for condition')
@@ -60,9 +73,9 @@ async function waitFor(predicate, timeout = 1000) {
 
 beforeEach(async () => {
     hub = new Nexusse()
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
         const server = hub.listen(0, () => {
-            port = server.address().port
+            port = (server.address() as AddressInfo).port
             resolve()
         })
     })
@@ -78,13 +91,13 @@ describe('listen()', () => {
     test('returns the http server and invokes the callback only once listening', async () => {
         const other = new Nexusse()
         let returned = false
-        let server
-        await new Promise((resolve) => {
+        let server!: http.Server
+        await new Promise<void>((resolve) => {
             server = other.listen(0, () => {
                 // Previously the callback was invoked synchronously, before the server was bound
                 expect(returned).toBe(true)
                 expect(server.listening).toBe(true)
-                expect(server.address().port).toBeGreaterThan(0)
+                expect((server.address() as AddressInfo).port).toBeGreaterThan(0)
                 resolve()
             })
             returned = true
@@ -98,7 +111,7 @@ describe('listen()', () => {
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
         const server = other.listen(port)
 
-        const error = await new Promise(resolve => server.on('error', resolve))
+        const error = await new Promise<NodeJS.ErrnoException>(resolve => server.on('error', resolve))
         expect(error.code).toBe('EADDRINUSE')
         expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('listening'))
         logSpy.mockRestore()
@@ -129,7 +142,7 @@ describe('keep-alive', () => {
 
         expect(hub.get('keepAliveInterval')).toBe(10)
         expect(hub.core.keepAliveTimer).not.toBe(before)
-        expect(before._destroyed).toBe(true)
+        expect((before as unknown as { _destroyed: boolean })._destroyed).toBe(true)
     })
 
     test('rejects intervals below 5 seconds', () => {

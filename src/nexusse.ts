@@ -1,10 +1,12 @@
-const Express = require("express")
-const cors = require("cors")
-const events = require('events')
-const NexusseError = require('./NexusseError')
-const Subscriber = require('./Subscriber')
-const Subscribers = require('./Subscribers')
-const defaultConfig = require('./config')
+import { EventEmitter } from 'node:events'
+import type { Server } from 'node:http'
+import Express, { type Express as ExpressApp, type Request, type Response } from 'express'
+import cors from 'cors'
+import NexusseError from './NexusseError'
+import Subscriber from './Subscriber'
+import Subscribers from './Subscribers'
+import defaultConfig, { type Config } from './config'
+
 const appName = 'Nexusse'
 
 // Mandatory headers and http status to keep connection open
@@ -14,24 +16,31 @@ const httpResponseHeaders = {
     'Cache-Control': 'no-cache'
 }
 
-class NexusseCore {
-    constructor(config = null) {
+export type ListeningCallback = () => void
+
+/** @internal */
+export class NexusseCore {
+    config: Config
+    app: ExpressApp
+    eventEmitter: EventEmitter
+    subscribers: Subscribers
+    keepAliveTimer: NodeJS.Timeout | null = null
+    server?: Server
+
+    constructor(config: Record<string, unknown> | null = null) {
         this.config = defaultConfig
 
-        if (config && (typeof config !== 'number')) {
-            if (config.constructor === ({}).constructor) {
-                for (const property in config) {
-                    // noinspection JSUnfilteredForInLoop
-                    this.set(property, config[property])
-                }
+        if (config && typeof config === 'object' && config.constructor === Object) {
+            for (const property in config) {
+                this.set(property, config[property])
             }
         }
 
         // Main app
         this.app = Express()
 
-        // Create an object of EventEmitter class from events module
-        this.eventEmitter = new events.EventEmitter()
+        // Emits 'keep-alive' on every keep-alive tick
+        this.eventEmitter = new EventEmitter()
 
         // Object for managing the list of subscribers
         this.subscribers = new Subscribers(this.config)
@@ -44,29 +53,26 @@ class NexusseCore {
         // Define endpoints
         this.app.post('/publish', this.publish.bind(this))
         this.app.get('/subscribe', this.subscriptionHandler.bind(this))
-        this.app.get('/status', ((req, res) => res.json(this.subscribers.status())))
+        this.app.get('/status', (_req, res) => { res.json(this.subscribers.status()) })
 
         this.startKeepAliveTimer()
     }
 
-    get(option) {
-        switch (option) {
-            default:
-                return this.config.get(option)
-        }
+    get(option: string): any {
+        return this.config.get(option)
     }
 
-    set(option, value) {
+    set(option: string, value: unknown): this {
         switch (option) {
-            case 'keepAliveInterval':
-                if (typeof value !== "number") {
-                    return
+            case 'keepAliveInterval': {
+                if (typeof value !== 'number') {
+                    return this
                 }
 
-                let intValue = parseInt(value)
+                const intValue = Math.trunc(value)
 
                 if (!intValue || intValue < 5) {
-                    return
+                    return this
                 }
 
                 this.config.set(option, intValue)
@@ -78,6 +84,7 @@ class NexusseCore {
                         .startKeepAliveTimer()
                 }
                 break
+            }
 
             default:
                 this.config.set(option, value)
@@ -86,7 +93,7 @@ class NexusseCore {
         return this
     }
 
-    startKeepAliveTimer() {
+    startKeepAliveTimer(): this {
         // Never run two timers at once
         this.stopKeepAliveTimer()
 
@@ -107,7 +114,7 @@ class NexusseCore {
         return this
     }
 
-    stopKeepAliveTimer() {
+    stopKeepAliveTimer(): this {
         if (this.keepAliveTimer) {
             clearInterval(this.keepAliveTimer)
             this.keepAliveTimer = null
@@ -119,33 +126,33 @@ class NexusseCore {
     /**
      * Normalizes the `topics` query parameter. Express gives a string for
      * `?topics=a`, an array for `?topics=a&topics=b` and undefined when absent.
-     *
-     * @return {string[]}
      */
-    static normalizeTopics(rawTopics) {
-        const list = Array.isArray(rawTopics) ? rawTopics : (rawTopics === undefined ? [] : [rawTopics])
+    static normalizeTopics(rawTopics: unknown): string[] {
+        const list: unknown[] = Array.isArray(rawTopics) ? rawTopics : (rawTopics === undefined ? [] : [rawTopics])
 
         return [...new Set(list
-            .filter(topic => typeof topic === 'string')
+            .filter((topic): topic is string => typeof topic === 'string')
             .map(topic => topic.trim())
             .filter(topic => topic.length > 0))]
     }
 
-    subscriptionHandler(req, res) {
+    subscriptionHandler(req: Request, res: Response): void {
         const topics = NexusseCore.normalizeTopics(req.query.topics)
 
         if (!topics.length) {
-            return res.status(400).json({ error: 'At least one topic is required' })
+            res.status(400).json({ error: 'At least one topic is required' })
+            return
         }
 
-        let subscriberId = (new Date()).getTime().toString() + Math.random() * 1000000000
-        let subscriber
+        const subscriberId = (new Date()).getTime().toString() + Math.random() * 1000000000
+        let subscriber: Subscriber
 
         try {
             subscriber = new Subscriber(this.config, subscriberId, res, topics)
         } catch (error) {
             if (error instanceof NexusseError) {
-                return res.status(error.code).json({ error: error.message })
+                res.status(error.code).json({ error: error.message })
+                return
             }
             throw error
         }
@@ -153,7 +160,6 @@ class NexusseCore {
         // Write the response header to keep the connection open
         res.writeHead(200, httpResponseHeaders)
 
-        // Create a new client object to be added to the clients map.
         this.subscribers.add(subscriber)
 
         const keepAliveListener = () => {
@@ -167,18 +173,18 @@ class NexusseCore {
 
         this.eventEmitter.on('keep-alive', keepAliveListener)
 
-        res.write(`data:connected\n\n`)
-
+        res.write('data:connected\n\n')
     }
 
-    // Middleware for PORT /publish endpoint
-    async publish(req, res) {
+    // Handler for the POST /publish endpoint
+    publish(req: Request, res: Response): void {
         const publishPayload = req.body
         console.log(req.body)
 
         try {
             this.subscribers.notify(publishPayload)
-        } catch (nexusseError) {
+        } catch (error) {
+            const nexusseError = error as Partial<NexusseError>
             console.error(`${nexusseError.message} (code: ${nexusseError.code}). The notification was not sent.`)
             res.writeHead(nexusseError.code || 500, (nexusseError.code && nexusseError.message) || undefined)
             res.end()
@@ -192,15 +198,17 @@ class NexusseCore {
     /**
      * Starts listening for connections.
      *
-     * @param {number|null} port Port to listen on. Defaults to the configured port. Use 0 for a random free port.
-     * @param {function|null} callback Called once the server is actually listening.
-     * @return {import('http').Server}
+     * @param port Port to listen on. Defaults to the configured port. Use 0 for a random free port.
+     * @param callback Called once the server is actually listening.
      */
-    listen(port = null, callback = null) {
-        let _port = (port === null || port === undefined) ? this.get('port') : port
-        let onListening = typeof callback === 'function'
+    listen(port: number | null = null, callback: ListeningCallback | null = null): Server {
+        const _port: number = (port === null || port === undefined) ? this.get('port') : port
+        const onListening = typeof callback === 'function'
             ? callback
-            : () => console.log(`${appName} server listening on port ${this.server.address().port}`)
+            : () => {
+                const address = this.server?.address()
+                console.log(`${appName} server listening on port ${typeof address === 'object' && address ? address.port : _port}`)
+            }
 
         // If the user has chosen a port at the time of listening
         // for connections, then override the configuration port
@@ -209,69 +217,73 @@ class NexusseCore {
 
         // Express 5 also invokes the app.listen() callback on errors,
         // so only call ours once the server is actually listening.
-        this.server = this.app.listen(_port)
-        this.server.once('listening', onListening)
+        const server = this.app.listen(_port)
+        server.once('listening', onListening)
+        this.server = server
 
-        return this.server
+        return server
     }
 
     /**
      * Stops the keep-alive timer and closes the server and all open connections.
-     *
-     * @return {Promise<void>}
      */
-    close() {
+    close(): Promise<void> {
         this.stopKeepAliveTimer()
         this.eventEmitter.removeAllListeners('keep-alive')
 
-        if (!this.server) {
+        const server = this.server
+
+        if (!server) {
             return Promise.resolve()
         }
 
         return new Promise((resolve, reject) => {
-            this.server.close(error => error ? reject(error) : resolve())
+            server.close(error => error ? reject(error) : resolve())
 
             // SSE connections never end on their own
-            if (typeof this.server.closeAllConnections === 'function') {
-                this.server.closeAllConnections()
-            }
+            server.closeAllConnections()
         })
     }
 }
 
-class NexusssApi {
-    constructor(config = null) {
-        // Each API instance owns its own core, so several hubs can coexist (e.g. in tests)
+/**
+ * Public API of a Nexusse hub.
+ */
+export class Nexusse {
+    /** @internal */
+    readonly core: NexusseCore
+
+    constructor(config: Record<string, unknown> | null = null) {
+        // Each instance owns its own core, so several hubs can coexist (e.g. in tests)
         this.core = new NexusseCore(config)
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    startKeepAliveTimer() {
-        return this.core.startKeepAliveTimer()
+    startKeepAliveTimer(): this {
+        this.core.startKeepAliveTimer()
+        return this
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    stopKeepAliveTimer() {
-        return this.core.stopKeepAliveTimer()
+    stopKeepAliveTimer(): this {
+        this.core.stopKeepAliveTimer()
+        return this
     }
 
-    get(option) {
+    get(option: string): any {
         return this.core.get(option)
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    set(option, value) {
-        return this.core.set(option, value)
+    set(option: string, value: unknown): this {
+        this.core.set(option, value)
+        return this
     }
 
-    listen(port = null, callback = null) {
+    listen(port: number | null = null, callback: ListeningCallback | null = null): Server {
         return this.core.listen(port, callback)
     }
 
-    // noinspection JSUnusedGlobalSymbols
-    close() {
+    close(): Promise<void> {
         return this.core.close()
     }
 }
 
-module.exports = NexusssApi
+export default Nexusse

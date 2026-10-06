@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import NexusseError from '../src/NexusseError.js'
+import { NexusseError } from '../src/index'
 
 test(`Default error message is "Error"`, () => {
     const nexusseError = new NexusseError()
@@ -17,6 +17,6 @@ test(`The error message can be set with optional error code`, () => {
 })
 
 test(`The error code can be set with optional error message`, () => {
-    const nexusseError = new NexusseError(null, 123)
+    const nexusseError = new NexusseError(undefined, 123)
     expect(nexusseError.code).toBe(123)
 })

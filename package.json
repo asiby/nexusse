@@ -2,15 +2,40 @@
   "name": "nexusse",
   "version": "1.0.1",
   "description": "A Pub/Sub HUB for Server-Sent Event",
-  "main": "src/nexusse.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.18"
+  },
   "repository": "asiby/nexusse",
   "scripts": {
+    "build": "tsup",
+    "prepare": "npm run build",
+    "typecheck": "tsc -p .",
     "test": "vitest run",
-    "start": "node src/nexusse.js",
+    "test:watch": "vitest",
+    "start": "npm run build && node -e \"new (require('./'))().listen()\"",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "build-demo": "npm install --prefix ./demo/ . && echo \"Start the demo projet by running: npm start-demo\"",
     "start-demo": "cd demo && npm start",
-    "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start",
-    "test:watch": "vitest"
+    "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start"
   },
   "keywords": [
     "Server-Sent",
@@ -31,9 +56,12 @@
     "nconf": "^0.13.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/nconf": "^0.10.7",
+    "@types/node": "^22.20.5",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9",
     "vitest": "^5.0.3"
-  },
-  "engines": {
-    "node": ">=18.18"
   }
 }

@@ -1,14 +1,26 @@
-const NexusseError = require('./NexusseError')
+import NexusseError from './NexusseError'
+import type { Config } from './config'
+
+export interface RawNotification {
+    event?: string
+    data?: unknown
+    topics?: string[]
+}
 
 /**
  * Notification payload
  *
  * This represents the message that will be encapsulated inside the Server Sent Events.
  */
-module.exports = class NotificationPayload {
-    constructor(config, {event:event = '', data: data = null, topics: topics = []}) {
+export default class NotificationPayload {
+    config: Config
+    event: string
+    data: unknown
+    topics: string[]
+
+    constructor(config: Config, { event = '', data = null, topics = [] }: RawNotification = {}) {
         if (!config) {
-            throw new Error("Missing configuration for the NotificationPayload class")
+            throw new Error('Missing configuration for the NotificationPayload class')
         }
 
         this.config = config
@@ -17,11 +29,11 @@ module.exports = class NotificationPayload {
         this.topics = topics
 
         if (!this.event) {
-            throw new NexusseError("The notification payload event is required", 400)
+            throw new NexusseError('The notification payload event is required', 400)
         }
 
         if (!this.topics.length) {
-            throw new NexusseError("The notification payload must have at least one topic", 400)
+            throw new NexusseError('The notification payload must have at least one topic', 400)
         }
 
         if (this.topics.length > this.config.get('max_publishing_topics_counts')) {
@@ -29,11 +41,11 @@ module.exports = class NotificationPayload {
         }
     }
 
-    toString() {
+    toString(): string {
         return JSON.stringify(this.toJson())
     }
 
-    toJson() {
+    toJson(): Required<RawNotification> {
         return {
             event: this.event,
             data: this.data,
