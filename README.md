@@ -24,7 +24,7 @@ hub.listen() // Nexusse server listening on port 3000
 
 ## Installation
 
-Requires Node.js 18.18 or later.
+Requires Node.js 22 or later.
 
 ```sh
 npm install nexusse
@@ -160,7 +160,7 @@ Starts or stops the keep-alive timer. It starts automatically, so you only need 
 - `set()`, `startKeepAliveTimer()` and `stopKeepAliveTimer()` return the hub.
 - `/publish` responds with JSON bodies, and its `topics` field can be a single string.
 - `/status` returns a JSON object instead of a JSON-encoded string.
-- Node.js 18.18 or later is required.
+- Node.js 22 or later is required.
 
 ## Development
 
@@ -172,6 +172,14 @@ npm run build       # build dist/ (CommonJS, ESM and type declarations)
 npm start           # build and run a hub on port 3000
 npm run build-and-start-demo   # run the demo app in demo/
 ```
+
+CI runs the type check, tests and build on Node.js 22 and 24 for every push and pull request.
+
+### Releasing
+
+1. Bump `version` in `package.json` (for example with `npm version minor`) and commit.
+2. Push a matching tag, such as `v2.1.0`.
+3. The Release workflow runs CI, builds and packs the package in a job without publishing rights, then a separate job publishes that tarball to npm with provenance using npm trusted publishing.
 
 ## Roadmap
 

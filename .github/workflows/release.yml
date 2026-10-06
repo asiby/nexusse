@@ -1,0 +1,86 @@
+name: Release
+
+# Publishes to npm when a version tag such as v2.0.0 is pushed.
+# Uses npm trusted publishing (OIDC): no npm token is stored anywhere,
+# and npm attaches a provenance attestation to every release.
+#
+# Only the "publish" job can obtain a publishing credential, and it never
+# installs or runs project dependencies: it receives the tarball built and
+# checked by the "build" job, which has no publishing rights. A compromised
+# dependency can therefore not use the credential.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      # No dependency install scripts run in the release build
+      - run: npm ci --ignore-scripts
+
+      - run: npm run build
+
+      - name: Check the built package loads from CommonJS and ESM
+        run: |
+          node -e "const N = require('nexusse'); if (typeof N !== 'function' || N.Nexusse !== N) process.exit(1)"
+          node --input-type=module -e "import N, { Nexusse } from 'nexusse'; if (N !== Nexusse) process.exit(1)"
+
+      - run: mkdir -p out && npm pack --ignore-scripts --pack-destination out
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: out/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # No checkout and no `npm ci`: only the tarball from the build job is used
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: out
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later. npm has no
+      # dependencies and no install scripts.
+      - run: npm install -g --ignore-scripts npm@^11.5.1
+
+      # --provenance makes npm fail instead of publishing without an attestation
+      - name: Publish the tarball
+        run: npm publish --provenance out/*.tgz
