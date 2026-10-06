@@ -1,4 +1,5 @@
-const NexusseError = require('../src/NexusseError')
+import { test, expect } from 'vitest'
+import NexusseError from '../src/NexusseError.js'
 
 test(`Default error message is "Error"`, () => {
     const nexusseError = new NexusseError()

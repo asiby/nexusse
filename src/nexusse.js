@@ -1,5 +1,4 @@
 const Express = require("express")
-const bodyParser = require("body-parser")
 const cors = require("cors")
 const events = require('events')
 const NexusseError = require('./NexusseError')
@@ -37,13 +36,13 @@ class NexusseCore {
         // Object for managing the list of subscribers
         this.subscribers = new Subscribers(this.config)
 
-        // Set cors and bodyParser middleware
+        // Set cors and body parsing middleware
         this.app.use(cors())
-        this.app.use(bodyParser.json())
-        this.app.use(bodyParser.urlencoded({ extended: false }))
+        this.app.use(Express.json())
+        this.app.use(Express.urlencoded({ extended: false }))
 
         // Define endpoints
-        this.app.post('/publish', bodyParser.json(), this.publish.bind(this))
+        this.app.post('/publish', this.publish.bind(this))
         this.app.get('/subscribe', this.subscriptionHandler.bind(this))
         this.app.get('/status', ((req, res) => res.json(this.subscribers.status())))
 
@@ -208,7 +207,10 @@ class NexusseCore {
         // in the configuration object.
         this.set('port', _port)
 
-        this.server = this.app.listen(_port, onListening)
+        // Express 5 also invokes the app.listen() callback on errors,
+        // so only call ours once the server is actually listening.
+        this.server = this.app.listen(_port)
+        this.server.once('listening', onListening)
 
         return this.server
     }

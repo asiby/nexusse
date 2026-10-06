@@ -5,11 +5,12 @@
   "main": "src/nexusse.js",
   "repository": "asiby/nexusse",
   "scripts": {
-    "test": "jest",
+    "test": "vitest run",
     "start": "node src/nexusse.js",
     "build-demo": "npm install --prefix ./demo/ . && echo \"Start the demo projet by running: npm start-demo\"",
     "start-demo": "cd demo && npm start",
-    "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start"
+    "build-and-start-demo": "npm install --prefix ./demo/ . && cd demo && npm start",
+    "test:watch": "vitest"
   },
   "keywords": [
     "Server-Sent",
@@ -25,15 +26,14 @@
   },
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.19.0",
-    "cors": "^2.8.5",
-    "express": "^4.17.1",
-    "nconf": "^0.11.4"
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "nconf": "^0.13.0"
   },
   "devDependencies": {
-    "jest": "^25.4.0"
+    "vitest": "^5.0.3"
   },
-  "jest": {
-    "testEnvironment": "node"
+  "engines": {
+    "node": ">=18.18"
   }
 }

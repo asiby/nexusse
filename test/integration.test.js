@@ -2,8 +2,9 @@
  * Integration tests: start a real Nexusse server on a random port
  * and talk to it over HTTP, the way clients do.
  */
-const http = require('http')
-const Nexusse = require('../src/nexusse')
+import http from 'node:http'
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
+import Nexusse from '../src/nexusse.js'
 
 let hub
 let port
@@ -57,11 +58,13 @@ async function waitFor(predicate, timeout = 1000) {
     }
 }
 
-beforeEach((done) => {
+beforeEach(async () => {
     hub = new Nexusse()
-    const server = hub.listen(0, () => {
-        port = server.address().port
-        done()
+    await new Promise((resolve) => {
+        const server = hub.listen(0, () => {
+            port = server.address().port
+            resolve()
+        })
     })
 })
 
@@ -72,31 +75,34 @@ afterEach(async () => {
 })
 
 describe('listen()', () => {
-    test('returns the http server and invokes the callback only once listening', (done) => {
+    test('returns the http server and invokes the callback only once listening', async () => {
         const other = new Nexusse()
         let returned = false
-        const server = other.listen(0, () => {
-            // Previously the callback was invoked synchronously, before the server was bound
-            expect(returned).toBe(true)
-            expect(server.listening).toBe(true)
-            expect(server.address().port).toBeGreaterThan(0)
-            other.close().then(done)
+        let server
+        await new Promise((resolve) => {
+            server = other.listen(0, () => {
+                // Previously the callback was invoked synchronously, before the server was bound
+                expect(returned).toBe(true)
+                expect(server.listening).toBe(true)
+                expect(server.address().port).toBeGreaterThan(0)
+                resolve()
+            })
+            returned = true
         })
-        returned = true
         expect(server).toBeInstanceOf(http.Server)
+        await other.close()
     })
 
-    test('does not report success when the port is already taken', (done) => {
+    test('does not report success when the port is already taken', async () => {
         const other = new Nexusse()
-        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
         const server = other.listen(port)
 
-        server.on('error', (error) => {
-            expect(error.code).toBe('EADDRINUSE')
-            expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('listening'))
-            logSpy.mockRestore()
-            other.close().catch(() => {}).then(() => done())
-        })
+        const error = await new Promise(resolve => server.on('error', resolve))
+        expect(error.code).toBe('EADDRINUSE')
+        expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('listening'))
+        logSpy.mockRestore()
+        await other.close().catch(() => {})
     })
 })
 
@@ -205,8 +211,8 @@ describe('POST /publish', () => {
     })
 
     test('returns 400 for an invalid payload', async () => {
-        const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
         const res = await request('POST', '/publish', { data: 'no event or topics' })
         expect(res.status).toBe(400)
