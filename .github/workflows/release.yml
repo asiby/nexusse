@@ -1,12 +1,16 @@
 name: Release
 
-# Publishes to npm when a version tag such as v2.0.0 is pushed.
+# Stages a release on npm when a version tag such as v2.0.0 is pushed.
 # Uses npm trusted publishing (OIDC): no npm token is stored anywhere,
 # and npm attaches a provenance attestation to every release.
 #
-# Only the "publish" job can obtain a publishing credential, and it never
+# The release is staged, not published: it only goes live once a
+# maintainer approves it on npmjs.com (or with `npm stage approve`),
+# which requires their 2FA. A compromised pipeline cannot publish alone.
+#
+# Only the "stage" job can obtain an npm credential, and it never
 # installs or runs project dependencies: it receives the tarball built and
-# checked by the "build" job, which has no publishing rights. A compromised
+# checked by the "build" job, which has no npm rights. A compromised
 # dependency can therefore not use the credential.
 
 on:
@@ -59,7 +63,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
+  stage:
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -77,10 +81,23 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
-      # Trusted publishing needs npm 11.5.1 or later. npm has no
+      # Staged publishing needs npm 11.15.0 or later. npm has no
       # dependencies and no install scripts.
-      - run: npm install -g --ignore-scripts npm@^11.5.1
+      - run: npm install -g --ignore-scripts npm@^11.15.0
 
-      # --provenance makes npm fail instead of publishing without an attestation
-      - name: Publish the tarball
-        run: npm publish --provenance out/*.tgz
+      # --provenance makes npm fail instead of staging without an attestation
+      - name: Stage the tarball for approval
+        run: npm stage publish --provenance out/*.tgz
+
+      - name: Approval instructions
+        run: |
+          {
+            echo "### Release staged, waiting for approval"
+            echo
+            echo "Approve it in the **Staged Packages** tab of the package on npmjs.com, or run:"
+            echo
+            echo '```sh'
+            echo 'npm stage list nexusse'
+            echo 'npm stage approve <stage-id>'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

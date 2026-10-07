@@ -179,7 +179,8 @@ CI runs the type check, tests and build on Node.js 22 and 24 for every push and 
 
 1. Bump `version` in `package.json` (for example with `npm version minor`) and commit.
 2. Push a matching tag, such as `v2.1.0`.
-3. The Release workflow runs CI, builds and packs the package in a job without publishing rights, then a separate job publishes that tarball to npm with provenance using npm trusted publishing.
+3. The Release workflow runs CI, builds and packs the package in a job without npm rights, then a separate job stages that tarball on npm with provenance using npm trusted publishing.
+4. Approve the staged release in the **Staged Packages** tab on npmjs.com, or with `npm stage approve <stage-id>` (see `npm stage list nexusse`). Approval requires 2FA; nothing is public until then. To check exactly what will be published first, run `npm stage download <stage-id>`.
 
 ## Roadmap
 
