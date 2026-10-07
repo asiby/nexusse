@@ -1,3 +1,8 @@
+[![CI](https://github.com/asiby/nexusse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/asiby/nexusse/actions/workflows/ci.yml?query=branch%3Amain)
+[![npm](https://img.shields.io/npm/v/nexusse)](https://www.npmjs.com/package/nexusse)
+[![last commit](https://img.shields.io/github/last-commit/asiby/nexusse)](https://github.com/asiby/nexusse/commits/main)
+[![license](https://img.shields.io/github/license/asiby/nexusse)](LICENSE)
+
 # Nexusse
 
 A small publish/subscribe hub for [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events), built on Express and written in TypeScript. Its name is _Nexus_ + _SSE_, and it is inspired by [Mercure](https://mercure.rocks/).
